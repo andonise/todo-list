@@ -1,5 +1,6 @@
 package todo.app.my;
 
+import datamodel.Datasource;
 import datamodel.TodoData;
 import datamodel.TodoItem;
 import javafx.fxml.FXML;
@@ -8,12 +9,19 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 
 import java.io.IOException;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+
 public class Controller {
     private List<TodoItem> todoItems;
+
+    private List<TodoItem> todaysItems;
+
     @FXML
     private ListView<TodoItem> taskList;
     @FXML
@@ -22,26 +30,29 @@ public class Controller {
     private Label deadline;
     @FXML
     private BorderPane mainBorderPane;
+    @FXML
+    private ToggleButton toggleButton;
 
 
     public void initialize() throws Exception {
-
-//        TodoItem item1 = new TodoItem("Merge", "MERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineeeMERGE BINEE, merge bineee", LocalDate.of(2020, 04, 01));
-//        TodoItem item2 = new TodoItem("Merge", "merge merge merge", LocalDate.of(2020, 01, 22));
-//        TodoItem item3 = new TodoItem("Merge", "merge merge merge", LocalDate.of(2020, 01, 01));
-//        TodoItem item4 = new TodoItem("Merge", "merge merge merge", LocalDate.of(2020, 07, 01));
         todoItems = new ArrayList<TodoItem>();
-//        todoItems.add(item1);
-//        todoItems.add(item2);
-//        todoItems.add(item3);
-//        todoItems.add(item4);
-//        taskList.getItems().setAll(todoItems);
-//        // Select the first task when the app is open
-//        taskList.getSelectionModel().selectFirst();
-//        handleClickListView();
+        try {
+            Datasource data = new Datasource();
+            data.open();
+            List<TodoItem> todoItem = new ArrayList<>();
+            todoItem = data.querryTasks();
+            if (todoItem != null) {
+                taskList.getItems().setAll(data.querryTasks());
+            } else {
+                System.out.println("You don't have any tasks to do !");
+            }
+        } catch (Exception e) {
+            System.out.println("Could not query the tasks " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    public void showDialog() throws IOException {
+    public void showDialog() throws IOException, SQLException {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.initOwner(mainBorderPane.getScene().getWindow());
         mainBorderPane.widthProperty();
@@ -64,9 +75,23 @@ public class Controller {
             AddTaskController controller = fxmlLoader.getController();
             TodoItem newItem = controller.processItem();
             todoItems.add(newItem);
-            taskList.getItems().setAll(todoItems);
+            TodoData.getInstance().addTodoItem(newItem);
+
+            try {
+                Statement statement = Datasource.conn.createStatement();
+                statement.executeUpdate("INSERT INTO task (Description, Details, Date, Done) " + "VALUES (\'" + newItem.getShortDescription() + "\', \'" + newItem.getDetails() + "\', \' " + newItem.getDueDate() + "\', 1 )");
+
+            } catch (Exception e) {
+                System.out.println("Couldn't establish the connection with the database !");
+                e.printStackTrace();
+            }
+
+            taskList.getItems().add(newItem);
             taskList.getSelectionModel().select(newItem);
             handleClickListView();
+//            Datasource.conn.close();
+
+            System.out.println(todoItems.toString());
         }
     }
 
@@ -74,18 +99,53 @@ public class Controller {
     public void handleClickListView() {
             TodoItem item = taskList.getSelectionModel().getSelectedItem();
             detailsTextArea.setText(item.getDetails());
-            deadline.setText(item.getDueDate().toString());
-    }
+            deadline.setText(item.getDueDate());
+            }
+
+//    public List todaysTasks () {
+//        boolean isSelected = toggleButton.isSelected();
+//        if (isSelected) {
+//            todaysItems = new ArrayList<>();
+//            for (TodoItem item : todoItems) {
+//                if (item.getDueDate() == LocalDate.now().toString());
+//                todaysItems.add(item);
+//            }
+//            try {
+//           taskList.getItems().setAll(todaysItems); } catch (Exception e) {
+//                System.out.println("Nu sunt taskuri pentru ziua de astazi !");
+//            }
+//            return todaysItems;
+//        }
+//            return null;
+
+//        }
+
+
+
+
     public void deleteTask(){
         TodoItem itemToDelete = taskList.getSelectionModel().getSelectedItem();
+
+        try {
+            Statement statement = Datasource.conn.createStatement();
+            statement.execute("DELETE FROM task " +
+                    "WHERE Description= \'" + itemToDelete.getShortDescription() + "\' AND Details= \'" + itemToDelete.getDetails() +
+                    "\' AND Date= \'" + itemToDelete.getDueDate() + "\';");
+
+        } catch (Exception e) {
+            System.out.println("Couldn't delete the task from database");
+            e.printStackTrace();
+        }
+
         taskList.getItems().remove(itemToDelete);
         handleClickListView();
     }
+    public void todaysTask() {
+        for (TodoItem item : todoItems) {
+            if(item.getDueDate() == LocalDate.now().toString());
+            taskList.getItems().add(item);
+        }
 
-    public void addTask() {
-        TodoData todoData = new TodoData();
-        taskList = new ListView<TodoItem>(todoData.getTodoItems());
-        System.out.println(taskList.toString());
     }
 
 }
