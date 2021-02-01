@@ -1,13 +1,16 @@
 package datamodel;
 
-import java.time.LocalDate;
-
 public class TodoItem {
     private String shortDescription;
     private String details;
-    private LocalDate dueDate;
+    private String dueDate;
 
-    public TodoItem(String shortDescription, String details,LocalDate dueDate) {
+//    public TodoItem(String description, String taskDetails, LocalDate pickDate) {
+//    }
+    public TodoItem() {
+
+    }
+    public TodoItem(String shortDescription, String details, String dueDate) {
         this.shortDescription = shortDescription;
         this.details = details;
         this.dueDate = dueDate;
@@ -29,11 +32,11 @@ public class TodoItem {
         this.details = details;
     }
 
-    public LocalDate getDueDate() {
+    public String getDueDate() {
         return dueDate;
     }
 
-    public void setDueDate(LocalDate dueDate) {
+    public void setDueDate(String dueDate) {
         this.dueDate = dueDate;
     }
 
